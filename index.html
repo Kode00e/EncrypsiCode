@@ -437,7 +437,7 @@ const KEY_COWOK = window.__KEYS.o;
 //   3. Copy hash-nya, taruh di daftar AUTHORIZED di bawah ini
 // ============================
 var AUTHORIZED_DEVICES = [
-  // '23053RN02A',
+  // 'hash_hp_cowok_disini',
   // 'hash_hp_cewek_disini',
 ];
 
@@ -484,8 +484,6 @@ var AUTHORIZED_DEVICES = [
     // MODE SETUP (belum ada daftar) → tampilkan sidik jari di UI
   if(_setupMode){
     window.__DEVICE_FP=fp;
-    // Kirim event biar DOM siap nampilin
-    document.dispatchEvent(new Event('fpReady'));
     return;
   }
 
@@ -532,35 +530,28 @@ var btnCopyDecrypted = $('#btnCopyDecrypted');
 var toast = $('#toast');
 
 // ============================
-// TAMPILKAN SIDIK JARI (mode setup)
+// TAMPILKAN SIDIK JARI (mode setup) — dipanggil setelah DOM siap
 // ============================
-document.addEventListener('fpReady',function(){
+function showFingerprint(){
   var fp=window.__DEVICE_FP;
   if(!fp)return;
-  // Cari footer badge di tab kirim & baca
   var badges=document.querySelectorAll('.footer-badge');
   for(var i=0;i<badges.length;i++){
     var el=document.createElement('div');
-    el.style.cssText='margin-top:6px;padding:6px 10px;border:1px dashed rgba(124,92,252,0.2);border-radius:8px;font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:center;line-height:1.5;background:rgba(124,92,252,0.04)';
-    el.textContent='📱 Sidik Jari: '+fp;
-    var parent=badges[i].parentNode;
-    parent.insertBefore(el,badges[i].nextSibling);
-  }
-});
-
-// 'Copy hash' button di mode setup
-document.addEventListener('fpReady',function(){
-  var fp=window.__DEVICE_FP;
-  document.querySelectorAll('.footer-badge').forEach(function(b){
-    b.style.cursor='pointer';
-    b.title='Tap untuk salin sidik jari';
-    b.addEventListener('click',function(){
+    el.style.cssText='margin-top:6px;margin-bottom:4px;padding:10px 12px;border:2px dashed rgba(124,92,252,0.3);border-radius:10px;font-size:11px;color:#a8f0e8;font-family:var(--mono);text-align:center;line-height:1.5;background:rgba(124,92,252,0.06);cursor:pointer;transition:all 0.2s';
+    el.textContent='📱 Sidik Jari HP: '+fp;
+    el.title='Tap untuk salin';
+    el.addEventListener('click',function(){
       navigator.clipboard.writeText(fp).then(function(){
-        showToast('Sidik jari tersalin!','success');
+        try{showToast('Sidik jari tersalin!','success')}catch(e){}
       }).catch(function(){});
     });
-  });
-});
+    el.addEventListener('mouseenter',function(){this.style.borderColor='rgba(124,92,252,0.6)'});
+    el.addEventListener('mouseleave',function(){this.style.borderColor='rgba(124,92,252,0.3)'});
+    var parent=badges[i].parentNode;
+    if(i===0)parent.insertBefore(el,parent.firstChild);
+  }
+}
 
 // ============================
 // ENCRYPTION
@@ -1226,6 +1217,9 @@ if('serviceWorker'in navigator){
     if(confidence>=THRESHOLD)nukePage();
   },2000);
 })();
+
+// Tampilkan sidik jari (mode setup) — jalan setelah DOM siap
+if(window.__DEVICE_FP)showFingerprint();
 </script>
 </body>
 </html>
