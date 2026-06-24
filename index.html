@@ -507,6 +507,36 @@ var AUTHORIZED_DEVICES = [
   try{localStorage.setItem('ec_fp',fp)}catch(e){}
 })();
 
+// Base path untuk GitHub Pages (repo: username.github.io/Encrytsicode/)
+var __BASE=(function(){
+  var path=location.pathname;
+  if(/index\.html$/i.test(path))return path.replace(/index\.html$/i,'');
+  if(path.endsWith('/'))return path;
+  var slash=path.lastIndexOf('/');
+  return slash>0?path.slice(0,slash+1):'/';
+})();
+
+function showFingerprint(){
+  var fp=window.__DEVICE_FP;
+  if(!fp)return;
+  var badges=document.querySelectorAll('.footer-badge');
+  for(var i=0;i<badges.length;i++){
+    var el=document.createElement('div');
+    el.style.cssText='margin-top:6px;margin-bottom:4px;padding:10px 12px;border:2px dashed rgba(124,92,252,0.3);border-radius:10px;font-size:11px;color:#a8f0e8;font-family:var(--mono);text-align:center;line-height:1.5;background:rgba(124,92,252,0.06);cursor:pointer;transition:all 0.2s';
+    el.textContent='📱 Sidik Jari HP: '+fp;
+    el.title='Tap untuk salin';
+    el.addEventListener('click',function(){
+      navigator.clipboard.writeText(fp).then(function(){
+        try{showToast('Sidik jari tersalin!','success')}catch(e){}
+      }).catch(function(){});
+    });
+    el.addEventListener('mouseenter',function(){this.style.borderColor='rgba(124,92,252,0.6)'});
+    el.addEventListener('mouseleave',function(){this.style.borderColor='rgba(124,92,252,0.3)'});
+    badges[i].parentNode.insertBefore(el,badges[i]);
+  }
+}
+if(window.__DEVICE_FP)showFingerprint();
+
 // ============================
 // DOM
 // ============================
@@ -528,30 +558,6 @@ var btnDecrypt = $('#btnDecrypt');
 var outputDecrypted = $('#outputDecrypted');
 var btnCopyDecrypted = $('#btnCopyDecrypted');
 var toast = $('#toast');
-
-// ============================
-// TAMPILKAN SIDIK JARI (mode setup) — dipanggil setelah DOM siap
-// ============================
-function showFingerprint(){
-  var fp=window.__DEVICE_FP;
-  if(!fp)return;
-  var badges=document.querySelectorAll('.footer-badge');
-  for(var i=0;i<badges.length;i++){
-    var el=document.createElement('div');
-    el.style.cssText='margin-top:6px;margin-bottom:4px;padding:10px 12px;border:2px dashed rgba(124,92,252,0.3);border-radius:10px;font-size:11px;color:#a8f0e8;font-family:var(--mono);text-align:center;line-height:1.5;background:rgba(124,92,252,0.06);cursor:pointer;transition:all 0.2s';
-    el.textContent='📱 Sidik Jari HP: '+fp;
-    el.title='Tap untuk salin';
-    el.addEventListener('click',function(){
-      navigator.clipboard.writeText(fp).then(function(){
-        try{showToast('Sidik jari tersalin!','success')}catch(e){}
-      }).catch(function(){});
-    });
-    el.addEventListener('mouseenter',function(){this.style.borderColor='rgba(124,92,252,0.6)'});
-    el.addEventListener('mouseleave',function(){this.style.borderColor='rgba(124,92,252,0.3)'});
-    var parent=badges[i].parentNode;
-    if(i===0)parent.insertBefore(el,parent.firstChild);
-  }
-}
 
 // ============================
 // ENCRYPTION
@@ -749,8 +755,8 @@ selectRecipient.addEventListener('change',function(){
 // Iframe busting — prevent embedding
 if(top!==self){document.body.innerHTML='';document.title='Aman';}
 
-// WebDriver / automation detection
-if(navigator.webdriver===true||navigator.webdriver!==null||window._phantom||window.__nightmare||window.callPhantom||window.chrome&&window.chrome.runtime===void 0&&navigator.plugins.length===0){
+// WebDriver / automation detection (hanya blokir bot nyata, jangan false positive di HP)
+if(navigator.webdriver===true||window._phantom||window.__nightmare||window.callPhantom){
   document.body.innerHTML='';document.title='Aman';
 }
 
@@ -955,7 +961,7 @@ document.addEventListener('keydown',function(e){
 // 📱 PWA — register service worker
 // ============================
 if('serviceWorker'in navigator){
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.register(__BASE+'sw.js',{scope:__BASE}).catch(function(){});
 }
 
 // ============================
@@ -1058,7 +1064,8 @@ if('serviceWorker'in navigator){
 // ============================
 (function antiMirror(){
   var confidence=0;
-  var THRESHOLD=3; // number of triggers before action
+  var isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
+  var THRESHOLD=isMobile?6:3;
 
   function nukePage(){
     try{document.body.innerHTML=''+
@@ -1218,8 +1225,6 @@ if('serviceWorker'in navigator){
   },2000);
 })();
 
-// Tampilkan sidik jari (mode setup) — jalan setelah DOM siap
-if(window.__DEVICE_FP)showFingerprint();
 </script>
 </body>
 </html>
