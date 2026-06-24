@@ -442,8 +442,7 @@ var AUTHORIZED_DEVICES = [
 ];
 
 (function deviceLock(){
-  // If whitelist is empty — skip check (mode belajar/setup)
-  if(AUTHORIZED_DEVICES.length===0)return;
+  var _setupMode=AUTHORIZED_DEVICES.length===0;
 
   function _hash(str){
     var h=0;
@@ -481,6 +480,16 @@ var AUTHORIZED_DEVICES = [
   }
 
   var fp=getFingerprint();
+
+    // MODE SETUP (belum ada daftar) → tampilkan sidik jari di UI
+  if(_setupMode){
+    window.__DEVICE_FP=fp;
+    // Kirim event biar DOM siap nampilin
+    document.dispatchEvent(new Event('fpReady'));
+    return;
+  }
+
+  // MODE LOCKED → cek daftar
   var allowed=false;
   for(var i=0;i<AUTHORIZED_DEVICES.length;i++){
     if(AUTHORIZED_DEVICES[i]===fp){allowed=true;break}
@@ -497,7 +506,6 @@ var AUTHORIZED_DEVICES = [
     throw new Error('Device not authorized');
   }
 
-  // Kalau lolos, simpen di localStorage biar ga perlu ulang fingerprint tiap load
   try{localStorage.setItem('ec_fp',fp)}catch(e){}
 })();
 
@@ -522,6 +530,37 @@ var btnDecrypt = $('#btnDecrypt');
 var outputDecrypted = $('#outputDecrypted');
 var btnCopyDecrypted = $('#btnCopyDecrypted');
 var toast = $('#toast');
+
+// ============================
+// TAMPILKAN SIDIK JARI (mode setup)
+// ============================
+document.addEventListener('fpReady',function(){
+  var fp=window.__DEVICE_FP;
+  if(!fp)return;
+  // Cari footer badge di tab kirim & baca
+  var badges=document.querySelectorAll('.footer-badge');
+  for(var i=0;i<badges.length;i++){
+    var el=document.createElement('div');
+    el.style.cssText='margin-top:6px;padding:6px 10px;border:1px dashed rgba(124,92,252,0.2);border-radius:8px;font-size:10px;color:var(--text-muted);font-family:var(--mono);text-align:center;line-height:1.5;background:rgba(124,92,252,0.04)';
+    el.textContent='📱 Sidik Jari: '+fp;
+    var parent=badges[i].parentNode;
+    parent.insertBefore(el,badges[i].nextSibling);
+  }
+});
+
+// 'Copy hash' button di mode setup
+document.addEventListener('fpReady',function(){
+  var fp=window.__DEVICE_FP;
+  document.querySelectorAll('.footer-badge').forEach(function(b){
+    b.style.cursor='pointer';
+    b.title='Tap untuk salin sidik jari';
+    b.addEventListener('click',function(){
+      navigator.clipboard.writeText(fp).then(function(){
+        showToast('Sidik jari tersalin!','success');
+      }).catch(function(){});
+    });
+  });
+});
 
 // ============================
 // ENCRYPTION
