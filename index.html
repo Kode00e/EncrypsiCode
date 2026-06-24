@@ -150,6 +150,10 @@ input:focus,textarea:focus,.pilih:focus{
 }
 input::placeholder,textarea::placeholder{color:var(--text-muted)}
 textarea{min-height:88px;line-height:1.5}
+.masked-text{-webkit-text-security:disc;text-security:disc}
+.masked-text.unmasked{-webkit-text-security:none;text-security:none}
+.toggle-mask-btn{cursor:pointer;color:var(--primary);text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:5px;font-weight:600;user-select:none;-webkit-tap-highlight-color:transparent;transition:all 0.2s;}
+.toggle-mask-btn:active{opacity:0.7;transform:scale(0.95);}
 
 select.pilih{
   appearance:none;cursor:pointer;
@@ -253,6 +257,46 @@ select.pilih option{background:#0c0c22;color:var(--text);}
 @media(min-width:768px){
   .app{max-width:430px}
 }
+/* Video DRM guard — 1×1 px, hampir transparan, tetap aktif di compositor */
+.drm-guard{
+  position:fixed;top:0;left:0;
+  width:1px;height:1px;
+  opacity:0.01;
+  pointer-events:none;
+  z-index:2147483646;
+  display:block;
+  object-fit:contain;
+  overflow:hidden;
+  border:0;
+  background:#000;
+}
+.drm-guard--br{top:auto;left:auto;bottom:0;right:0}
+/* Privacy shield — blur konten sensitif (anti screen share Discord/OBS) */
+.shield-wrap{position:relative}
+.shield-wrap.shield-active .shield-content{
+  filter:blur(16px) saturate(0.4);
+  -webkit-user-select:none;user-select:none;
+  pointer-events:none;
+}
+.shield-cover{
+  display:none;position:absolute;inset:0;z-index:6;
+  align-items:center;justify-content:center;
+  background:rgba(6,6,18,0.55);
+  border-radius:var(--radius-sm);
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  border:1px dashed rgba(124,92,252,0.35);
+}
+.shield-wrap.shield-active .shield-cover{display:flex}
+.shield-hint{
+  font-size:11px;font-weight:600;color:var(--secondary);
+  text-align:center;line-height:1.5;padding:8px;
+  pointer-events:none;letter-spacing:0.3px;
+}
+.app.app-unfocused{filter:blur(18px) brightness(0.55)}
+.app.app-unfocused::before{
+  content:'';position:absolute;inset:0;z-index:250;
+  background:rgba(6,6,18,0.65);border-radius:inherit;pointer-events:none;
+}
 </style>
 </head>
 <body>
@@ -296,9 +340,16 @@ select.pilih option{background:#0c0c22;color:var(--text);}
 
   <!-- TAB KIRIM -->
   <div class="content" id="tabKirim">
-    <div>
-      <div class="label">Tulis pesan</div>
-      <textarea id="inputMessage" placeholder="Ketik pesan rahasia di sini..." rows="3"></textarea>
+    <div style="flex:1">
+      <div class="label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Tulis pesan</span>
+        <span id="toggleMask" class="toggle-mask-btn">
+          <svg id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          <svg id="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          <span id="textMask">Lihat</span>
+        </span>
+      </div>
+      <textarea id="inputMessage" class="masked-text" placeholder="Ketik pesan rahasia di sini..." rows="4"></textarea>
     </div>
 
     <div>
@@ -309,30 +360,20 @@ select.pilih option{background:#0c0c22;color:var(--text);}
       </select>
     </div>
 
-    <button class="btn btn-primary" id="btnEncrypt">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      Enkripsi &amp; Salin
-    </button>
-
-    <div>
-      <div class="label">Kode rahasia</div>
-      <div class="output-box empty" id="outputEncrypted">Hasil enkripsi akan muncul di sini</div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-secondary" id="btnCopy">
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn-secondary" id="btnCopy" style="flex:0.8">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Salin
       </button>
-      <button class="btn btn-secondary" id="btnWA">
+      <button class="btn btn-primary" id="btnWA" style="flex:1.2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
         WhatsApp
       </button>
     </div>
 
-    <div class="footer-badge">
+    <div class="footer-badge" style="margin-top:auto">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      Otomatis terenkripsi dengan kunci pasangan
+      Pesan otomatis terenkripsi saat dikirim
     </div>
   </div>
 
@@ -357,7 +398,10 @@ select.pilih option{background:#0c0c22;color:var(--text);}
 
     <div>
       <div class="label">Pesan asli</div>
-      <div class="message-result empty" id="outputDecrypted">Masukkan kode &amp; kunci, lalu tekan Dekripsi</div>
+      <div class="shield-wrap" data-shield data-shield-empty="Masukkan kode &amp; kunci, lalu tekan Dekripsi">
+        <div class="message-result empty shield-content" id="outputDecrypted">Masukkan kode &amp; kunci, lalu tekan Dekripsi</div>
+        <div class="shield-cover"><span class="shield-hint">👆 Tahan untuk lihat<br><small style="opacity:0.6;font-weight:500">Lepas = blur lagi</small></span></div>
+      </div>
     </div>
 
     <button class="btn btn-outline" id="btnCopyDecrypted">
@@ -401,31 +445,30 @@ select.pilih option{background:#0c0c22;color:var(--text);}
     </div>
   </div>
 
-  <!-- 🛡️ DRM GUARD: anti-mirror / anti-recording (full-screen overlay) -->
-  <video id="drmGuard"
-    style="position:fixed;top:0;left:0;width:100vw;height:100dvh;opacity:0.004;pointer-events:none;z-index:-1;display:block;object-fit:cover"
-    muted playsinline loop
-  ></video>
 </div>
+
+<!-- 🛡️ DRM GUARD: video 1×1 transparan + loop (trik streaming/Netflix) -->
+<video id="drmGuard" class="drm-guard" muted playsinline loop autoplay disablePictureInPicture
+  controlsList="nodownload nofullscreen noremoteplayback" aria-hidden="true"></video>
+<video id="drmGuard2" class="drm-guard drm-guard--br" muted playsinline loop autoplay disablePictureInPicture
+  controlsList="nodownload nofullscreen noremoteplayback" aria-hidden="true"></video>
 
 <script>
 // ================================================================
 // 🔐 KUNCI DALAM BENTUK TERENKRIPSI — tidak terbaca di source code
 // ================================================================
 (function(){
-  const _X = 0x44;
-  function _dk(s){return String.fromCharCode(...[...s].map(function(c){return c.charCodeAt(0)^_X}))}
   window.__KEYS = {
-    c: _dk('v}t}vz/!%'),  // 290926kei
-    o: _dk('vvutv}*%7,')  // 221029nash
+    c: atob('S3VjaW5nT3Jlbg=='),  // KucingOren
+    o: atob('UGFuZGFHZW1veQ==')   // PandaGemoy
   };
 })();
 
 const KEY_CEWE = window.__KEYS.c;
 const KEY_COWOK = window.__KEYS.o;
 // ================================================================
-// KEY_CEWE = 290926kei  → kunci si cewek (dipakai cowok buat kirim)
-// KEY_COWOK = 221029nash → kunci si cowok (dipakai cewek buat baca)
+// KEY_CEWE = KucingOren  → kunci si cewek (dipakai cowok buat kirim)
+// KEY_COWOK = PandaGemoy → kunci si cowok (dipakai cewek buat baca)
 // ================================================================
 
 // ============================
@@ -548,10 +591,9 @@ var tabBaca = $('#tabBaca');
 var tabBtns = $$('.tab');
 var inputMessage = $('#inputMessage');
 var selectRecipient = $('#selectRecipient');
-var outputEncrypted = $('#outputEncrypted');
-var btnEncrypt = $('#btnEncrypt');
 var btnCopy = $('#btnCopy');
 var btnWA = $('#btnWA');
+var toggleMask = $('#toggleMask');
 var inputCode = $('#inputCode');
 var inputDecryptKey = $('#inputDecryptKey');
 var btnDecrypt = $('#btnDecrypt');
@@ -570,25 +612,41 @@ function bytesToB64(bytes){
   return btoa(s);
 }
 
+var _FIXED_SALT = new Uint8Array([11,22,33,44,55,66,77,88,99,10,11,12,13,14,15,16]);
+
 async function encrypt(plain,pass){
-  var salt=crypto.getRandomValues(new Uint8Array(16));
   var iv=crypto.getRandomValues(new Uint8Array(12));
   var enc=new TextEncoder();
   var km=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
   var key=await crypto.subtle.deriveKey(
-    {name:'PBKDF2',salt:salt,iterations:100000,hash:'SHA-256'},
+    {name:'PBKDF2',salt:_FIXED_SALT,iterations:100000,hash:'SHA-256'},
     km,{name:'AES-GCM',length:256},false,['encrypt']
   );
   var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(plain));
-  var c=new Uint8Array(16+12+ct.byteLength);
-  c.set(salt,0);c.set(iv,16);c.set(new Uint8Array(ct),28);
-  return bytesToB64(c);
+  var c=new Uint8Array(12+ct.byteLength);
+  c.set(iv,0);c.set(new Uint8Array(ct),12);
+  var b64 = bytesToB64(c).replace(/=+$/,''); // Strip padding to save space
+  return 'E'+b64;
 }
 
 async function decrypt(cipherB64,pass){
-  var raw=b64ToBytes(cipherB64);
-  if(raw.length<28)throw new Error('Kode tidak valid');
-  var salt=raw.slice(0,16),iv=raw.slice(16,28),ct=raw.slice(28);
+  var isNew = cipherB64.charAt(0) === 'E';
+  var b64 = isNew ? cipherB64.slice(1) : cipherB64;
+  while(b64.length % 4 !== 0) b64 += '='; // Add padding back
+  var raw=b64ToBytes(b64);
+  
+  var salt, iv, ct;
+  if(isNew){
+    salt = _FIXED_SALT;
+    iv = raw.slice(0,12);
+    ct = raw.slice(12);
+  } else {
+    if(raw.length<28)throw new Error('Kode tidak valid');
+    salt = raw.slice(0,16);
+    iv = raw.slice(16,28);
+    ct = raw.slice(28);
+  }
+  
   var enc=new TextEncoder();
   var km=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
   var key=await crypto.subtle.deriveKey(
@@ -627,39 +685,6 @@ for(var i=0;i<tabBtns.length;i++){
   })(tabBtns[i]);
 }
 
-// ============================
-// ENCRYPT
-// ============================
-var lastEncrypted='';
-
-btnEncrypt.addEventListener('click',async function(){
-  var msg=inputMessage.value.trim();
-  if(!msg){showToast('Tulis pesan dulu','error');return}
-  var recipient=selectRecipient.value;
-  var key=recipient==='cewe'?KEY_CEWE:KEY_COWOK;
-  btnEncrypt.disabled=true;
-  btnEncrypt.innerHTML='<span class="spinner"></span> Mengenkripsi...';
-  try{
-    lastEncrypted=await encrypt(msg,key);
-    outputEncrypted.textContent=lastEncrypted;
-    outputEncrypted.className='output-box';
-    try{
-      await navigator.clipboard.writeText(lastEncrypted);
-      showToast('Terenkripsi & tersalin!','success');
-    }catch(e){
-      showToast('Pesan terenkripsi!','success');
-    }
-  }catch(e){
-    showToast('Gagal enkripsi','error');
-  }
-  btnEncrypt.disabled=false;
-  btnEncrypt.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Enkripsi & Salin';
-});
-
-// ============================
-// COPY ENCRYPTED
-// ============================
-
 // Invisible watermark characters for clipboard tracing
 var _watermark='\u200B\u200D\u200B\u200E\u200F';
 function _watermarkText(t){return t+_watermark}
@@ -675,19 +700,58 @@ var _copyToClipboard=function(text,cb){
   });
 };
 
-btnCopy.addEventListener('click',function(){
-  if(!lastEncrypted){showToast('Belum ada kode','error');return}
-  _copyToClipboard(lastEncrypted,function(){showToast('Kode tersalin!','success')});
-});
+// ============================
+// AUTO ENCRYPT & ACTIONS
+// ============================
+async function doEncryptAndAction(action){
+  var msg=inputMessage.value.trim();
+  if(!msg){showToast('Tulis pesan dulu','error');return}
+  var recipient=selectRecipient.value;
+  var key=recipient==='cewe'?KEY_CEWE:KEY_COWOK;
+  
+  var btn = action==='wa'?btnWA:btnCopy;
+  var origHtml = btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML='<span class="spinner"></span> Mengenkripsi...';
+  
+  try{
+    var encrypted=await encrypt(msg,key);
+    
+    if(action==='wa'){
+      window.open('https://wa.me/?text='+encodeURIComponent(encrypted),'_blank');
+      showToast('Membuka WhatsApp...');
+    } else {
+      _copyToClipboard(encrypted,function(){showToast('Kode tersalin!','success')});
+    }
+  }catch(e){
+    showToast('Gagal enkripsi','error');
+  }
+  btn.disabled=false;
+  btn.innerHTML=origHtml;
+}
 
-// ============================
-// WHATSAPP
-// ============================
-btnWA.addEventListener('click',function(){
-  if(!lastEncrypted){showToast('Enkripsi dulu!','error');return}
-  window.open('https://wa.me/?text='+encodeURIComponent(lastEncrypted),'_blank');
-  showToast('Membuka WhatsApp...');
-});
+btnWA.addEventListener('click',function(){ doEncryptAndAction('wa'); });
+btnCopy.addEventListener('click',function(){ doEncryptAndAction('copy'); });
+
+if(toggleMask){
+  var iconEye = document.getElementById('icon-eye');
+  var iconEyeOff = document.getElementById('icon-eye-off');
+  var textMask = document.getElementById('textMask');
+  toggleMask.addEventListener('click',function(){
+    inputMessage.classList.toggle('unmasked');
+    if(inputMessage.classList.contains('unmasked')){
+      textMask.textContent='Tutup';
+      iconEye.style.display='none';
+      iconEyeOff.style.display='block';
+      toggleMask.style.color='var(--text-dim)';
+    }else{
+      textMask.textContent='Lihat';
+      iconEyeOff.style.display='none';
+      iconEye.style.display='block';
+      toggleMask.style.color='var(--primary)';
+    }
+  });
+}
 
 // ============================
 // DECRYPT
@@ -702,11 +766,11 @@ btnDecrypt.addEventListener('click',async function(){
   try{
     var result=await decrypt(code,userKey);
     outputDecrypted.textContent=result;
-    outputDecrypted.className='message-result';
+    outputDecrypted.className='message-result shield-content';
     showToast('Pesan berhasil dibaca!','success');
   }catch(e){
     outputDecrypted.textContent='Kunci atau kode rahasia tidak cocok';
-    outputDecrypted.className='message-result';
+    outputDecrypted.className='message-result shield-content';
     showToast('Gagal: kunci salah','error');
   }
   btnDecrypt.disabled=false;
@@ -728,7 +792,7 @@ btnCopyDecrypted.addEventListener('click',function(){
 // ENTER SHORTCUT
 // ============================
 inputMessage.addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btnEncrypt.click()}
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btnWA.click()}
 });
 inputCode.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();inputDecryptKey.focus()}
@@ -737,16 +801,144 @@ inputDecryptKey.addEventListener('keydown',function(e){
   if(e.key==='Enter'){e.preventDefault();btnDecrypt.click()}
 });
 
+// Removed Output clear listener since output box is removed
+
 // ============================
-// CLEAR OUTPUT ON RECIPIENT CHANGE
+// 🔒 PRIVACY SHIELD — blur konten sensitif (anti Discord/OBS share)
 // ============================
-selectRecipient.addEventListener('change',function(){
-  if(lastEncrypted){
-    lastEncrypted='';
-    outputEncrypted.textContent='Hasil enkripsi akan muncul di sini';
-    outputEncrypted.className='output-box empty';
+(function privacyShield(){
+  var wraps=document.querySelectorAll('[data-shield]');
+  for(var i=0;i<wraps.length;i++){
+    (function(wrap){
+      var cover=wrap.querySelector('.shield-cover');
+      var content=wrap.querySelector('.shield-content');
+      if(!cover||!content)return;
+      var emptyHint=wrap.getAttribute('data-shield-empty')||'';
+      var holdTimer=null;
+
+      function hasSecret(){
+        var t=(content.textContent||'').trim();
+        if(!t)return false;
+        if(emptyHint&&t.indexOf(emptyHint.replace(/&amp;/g,'&'))>=0)return false;
+        if(t.indexOf('Masukkan kode')>=0||t.indexOf('Hasil enkripsi')>=0)return false;
+        if(t.indexOf('🔐')>=0||t.indexOf('❌')>=0)return false;
+        return true;
+      }
+
+      function lock(){
+        if(hasSecret())wrap.classList.add('shield-active');
+        else wrap.classList.remove('shield-active');
+      }
+
+      function unlock(){
+        wrap.classList.remove('shield-active');
+      }
+
+      function scheduleLock(){
+        clearTimeout(holdTimer);
+        holdTimer=setTimeout(lock,350);
+      }
+
+      cover.addEventListener('mousedown',function(e){e.preventDefault();unlock()});
+      cover.addEventListener('touchstart',function(e){e.preventDefault();unlock()},{passive:false});
+      cover.addEventListener('mouseup',scheduleLock);
+      cover.addEventListener('mouseleave',scheduleLock);
+      cover.addEventListener('touchend',scheduleLock);
+      cover.addEventListener('touchcancel',scheduleLock);
+
+      new MutationObserver(lock).observe(content,{childList:true,characterData:true,subtree:true});
+      lock();
+    })(wraps[i]);
   }
-});
+
+  var appEl=document.getElementById('app');
+  function setUnfocused(on){
+    if(!appEl)return;
+    if(on)appEl.classList.add('app-unfocused');
+    else appEl.classList.remove('app-unfocused');
+  }
+  window.addEventListener('blur',function(){setUnfocused(true)});
+  window.addEventListener('focus',function(){setUnfocused(false)});
+  document.addEventListener('visibilitychange',function(){
+    setUnfocused(document.hidden);
+    if(document.hidden)window.__wipeSecrets&&window.__wipeSecrets();
+  });
+})();
+
+// ============================
+// 📹 ANTI CAPTURE — deteksi & blok rekaman dari dalam browser
+// ============================
+(function antiCapture(){
+  function lock(){if(typeof window.__securityLock==='function')window.__securityLock('capture')}
+
+  window.__wipeSecrets=function(){
+    var od=document.getElementById('outputDecrypted');
+    if(od){
+      var t=od.textContent||'';
+      if(t.indexOf('Masukkan kode')<0&&t.indexOf('🔐')<0&&t.indexOf('Kunci')<0){
+        od.textContent='🔐 Pesan disembunyikan — dekripsi ulang';
+        od.className='message-result empty shield-content';
+      }
+    }
+    var im=document.getElementById('inputMessage');
+    if(im&&im.value)im.value='';
+  };
+
+  if(navigator.permissions&&navigator.permissions.query){
+    try{
+      navigator.permissions.query({name:'display-capture'}).then(function(p){
+        function checkPerm(){
+          if(p.state==='granted')lock();
+        }
+        checkPerm();
+        p.onchange=checkPerm;
+      }).catch(function(){});
+    }catch(e){}
+  }
+
+  if(window.MediaRecorder){
+    var OrigMR=window.MediaRecorder;
+    window.MediaRecorder=function(stream,opts){
+      if(!window.__allowMediaRecorder){
+        lock();
+        throw new DOMException('Recording blocked','NotAllowedError');
+      }
+      return new OrigMR(stream,opts);
+    };
+    window.MediaRecorder.prototype=OrigMR.prototype;
+    window.MediaRecorder.isTypeSupported=OrigMR.isTypeSupported.bind(OrigMR);
+  }
+
+  if(window.RTCPeerConnection&&RTCPeerConnection.prototype.addTrack){
+    var origAdd=RTCPeerConnection.prototype.addTrack;
+    RTCPeerConnection.prototype.addTrack=function(track){
+      try{
+        if(track&&track.kind==='video'){
+          var label=(track.label||'').toLowerCase();
+          var settings=track.getSettings?track.getSettings():{};
+          if(settings.displaySurface||/screen|window|monitor|display|tab/.test(label))lock();
+        }
+      }catch(e){}
+      return origAdd.apply(this,arguments);
+    };
+  }
+
+  if(window.RTCPeerConnection&&RTCPeerConnection.prototype.addStream){
+    var origStream=RTCPeerConnection.prototype.addStream;
+    RTCPeerConnection.prototype.addStream=function(stream){
+      try{
+        if(stream&&stream.getVideoTracks){
+          var tracks=stream.getVideoTracks();
+          for(var i=0;i<tracks.length;i++){
+            var lb=(tracks[i].label||'').toLowerCase();
+            if(/screen|window|monitor|display/.test(lb))lock();
+          }
+        }
+      }catch(e){}
+      return origStream.apply(this,arguments);
+    };
+  }
+})();
 
 // ============================
 // 🛡️ ANTI-INSPECT
@@ -807,132 +999,215 @@ document.addEventListener('keydown',function(e){
 })();
 
 // ============================
-// 🛡️ DRM ANTI-RECORDING GUARD
+// 🛡️ DRM ANTI-RECORDING GUARD (1×1 loop + EME)
 // ============================
 (function drmGuard(){
-  var video=document.getElementById('drmGuard');
-  if(!video)return;
+  var videos=[
+    document.getElementById('drmGuard'),
+    document.getElementById('drmGuard2')
+  ].filter(function(v){return!!v});
+  if(!videos.length)return;
 
-  // Detect supported MIME type for MediaRecorder
-  function getSupportedMime(){
-    var types=[
-      'video/webm;codecs=vp9',
-      'video/webm;codecs=vp8',
-      'video/webm',
-      'video/mp4;codecs=h264'
-    ];
-    for(var i=0;i<types.length;i++){
-      if(typeof MediaRecorder!=='undefined'&&MediaRecorder.isTypeSupported(types[i]))return types[i];
-    }
-    return '';
-  }
+  var _canvases=[];
 
-  // Generate tiny black video blob from canvas
-  async function spawnGuardVideo(){
+  function lockPage(reason){
+    if(typeof window.__securityLock==='function'){window.__securityLock(reason);return}
     try{
-      var canvas=document.createElement('canvas');
-      canvas.width=2;canvas.height=2;
-      var ctx=canvas.getContext('2d');
-      ctx.fillStyle='#000';ctx.fillRect(0,0,2,2);
-
-      var mime=getSupportedMime();
-      if(!mime)throw new Error('No supported MIME');
-
-      var stream=canvas.captureStream(1);
-      var recorder=new MediaRecorder(stream,{mimeType:mime});
-      var chunks=[];
-
-      recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
-      recorder.start();
-
-      await new Promise(function(r){setTimeout(r,400)});
-      recorder.stop();
-
-      await new Promise(function(r){recorder.onstop=r});
-
-      if(chunks.length===0)throw new Error('No chunks');
-      var blob=new Blob(chunks,{type:mime});
-      var url=URL.createObjectURL(blob);
-      video.src=url;
-    }catch(e){
-      // Fallback: tiny static video via data URL
-      video.src='data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQtar3MCKFh0jYUBAQGgA+UKBQVGDlUBAUG4gQFC7oEEQvOBAUP5BASwF8qBwEVZ';
-    }
-  }
-
-  // Initialize DRM via EME (Widevine / PlayReady / FairPlay)
-  async function initDRM(){
-    try{
-      var systems=[
-        'com.widevine.alpha',
-        'com.microsoft.playready',
-        'com.apple.fps',
-        'org.w3.clearkey'
-      ];
-      for(var i=0;i<systems.length;i++){
-        try{
-          if(typeof navigator.requestMediaKeySystemAccess!=='function')continue;
-          var config=[{
-            initDataTypes:['cenc','webm'],
-            videoCapabilities:[{contentType:'video/webm;codecs=vp9'}],
-            audioCapabilities:[]
-          }];
-          var access=await navigator.requestMediaKeySystemAccess(systems[i],config);
-          var keys=await access.createMediaKeys();
-          await video.setMediaKeys(keys);
-          break;
-        }catch(e){}
-      }
+      document.body.innerHTML='';
+      document.title='Aman';
     }catch(e){}
   }
 
-  // Anti-mirror: detect display capture
+  function getSupportedMime(){
+    var types=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
+    for(var i=0;i<types.length;i++){
+      if(typeof MediaRecorder!=='undefined'&&MediaRecorder.isTypeSupported(types[i]))return types[i];
+    }
+    return 'video/webm';
+  }
+
+  // Stream canvas 2×2 → video kosong looping (selalu hidup di compositor)
+  function spawnGuardStream(video){
+    var canvas=document.createElement('canvas');
+    canvas.width=2;canvas.height=2;
+    var ctx=canvas.getContext('2d');
+    var frame=0;
+    (function tick(){
+      ctx.fillStyle=frame%2?'#000001':'#000002';
+      ctx.fillRect(0,0,2,2);
+      frame++;
+      requestAnimationFrame(tick);
+    })();
+    var stream=canvas.captureStream(12);
+    video.srcObject=stream;
+    video.removeAttribute('src');
+    _canvases.push(canvas);
+    return stream;
+  }
+
+  // Fallback blob jika captureStream tidak didukung
+  async function spawnGuardBlob(video){
+    var canvas=document.createElement('canvas');
+    canvas.width=2;canvas.height=2;
+    canvas.getContext('2d').fillStyle='#000';
+    canvas.getContext('2d').fillRect(0,0,2,2);
+    var mime=getSupportedMime();
+    var stream=canvas.captureStream(1);
+    window.__allowMediaRecorder=true;
+    try{
+    var recorder=new MediaRecorder(stream,{mimeType:mime});
+    var chunks=[];
+    recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
+    recorder.start();
+    await new Promise(function(r){setTimeout(r,400)});
+    recorder.stop();
+    await new Promise(function(r){recorder.onstop=r});
+    if(!chunks.length)throw new Error('no chunks');
+    video.srcObject=null;
+    video.src=URL.createObjectURL(new Blob(chunks,{type:mime}));
+    video.loop=true;
+    }finally{window.__allowMediaRecorder=false;}
+  }
+
+  function parseClearKeyInit(initData){
+    var raw=new TextDecoder().decode(initData);
+    if(raw.indexOf('base64,')>=0){
+      var b64=raw.split('base64,')[1];
+      var bin=atob(b64);
+      var hex='';
+      for(var i=0;i<bin.length;i++)hex+=('0'+bin.charCodeAt(i).toString(16)).slice(-2);
+      return hex;
+    }
+    var hex='';
+    for(var j=0;j<initData.byteLength;j++)hex+=('0'+initData[j].toString(16)).slice(-2);
+    return hex;
+  }
+
+  async function handleEncrypted(video,mediaKeys,e){
+    try{
+      var kidHex=parseClearKeyInit(e.initData);
+      if(kidHex.length>32)kidHex=kidHex.slice(-32);
+      while(kidHex.length<32)kidHex='0'+kidHex;
+      var payload=JSON.stringify({keys:[{kid:kidHex,k:kidHex}]});
+      var session=mediaKeys.createSession();
+      session.addEventListener('message',function(){
+        session.update(new TextEncoder().encode(payload)).catch(function(){});
+      });
+      await session.generateRequest(e.initDataType,e.initData);
+    }catch(err){}
+  }
+
+  async function initEME(video){
+    if(typeof navigator.requestMediaKeySystemAccess!=='function')return null;
+    var systems=[
+      {id:'org.w3.clearkey',rob:''},
+      {id:'com.widevine.alpha',rob:'SW_SECURE_DECODE'},
+      {id:'com.microsoft.playready',rob:''},
+      {id:'com.apple.fps',rob:''}
+    ];
+    for(var s=0;s<systems.length;s++){
+      try{
+        var access=await navigator.requestMediaKeySystemAccess(systems[s].id,[{
+          initDataTypes:['cenc','keyids','webm'],
+          videoCapabilities:[{
+            contentType:'video/webm;codecs=vp9',
+            robustness:systems[s].rob
+          }],
+          audioCapabilities:[]
+        }]);
+        var keys=await access.createMediaKeys();
+        await video.setMediaKeys(keys);
+        if(systems[s].id==='org.w3.clearkey'){
+          video.addEventListener('encrypted',function(ev){
+            handleEncrypted(video,keys,ev);
+          });
+        }
+        return keys;
+      }catch(e){}
+    }
+    return null;
+  }
+
+  async function tryEncryptedAsset(video){
+    try{
+      var res=await fetch(__BASE+'guard-drm.webm',{cache:'no-store'});
+      if(!res.ok)return false;
+      video.srcObject=null;
+      video.src=URL.createObjectURL(await res.blob());
+      video.loop=true;
+      return true;
+    }catch(e){return false}
+  }
+
+  function hardenVideo(video){
+    video.muted=true;
+    video.playsInline=true;
+    video.loop=true;
+    video.autoplay=true;
+    try{video.disablePictureInPicture=true}catch(e){}
+    video.setAttribute('disablePictureInPicture','');
+    video.setAttribute('controlsList','nodownload nofullscreen noremoteplayback');
+    video.addEventListener('enterpictureinpicture',function(e){
+      e.preventDefault();
+      lockPage('pip');
+    });
+    video.addEventListener('webkitbeginfullscreen',function(e){e.preventDefault();lockPage('fs')});
+  }
+
   function watchDisplayCapture(){
-    var origGetDisplayMedia=navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia;
-    if(origGetDisplayMedia){
-      navigator.mediaDevices.getDisplayMedia=function(){
-        document.body.innerHTML='';
-        document.title='Akses Ditolak';
-        return origGetDisplayMedia.apply(this,arguments);
+    var md=navigator.mediaDevices;
+    if(!md)return;
+    var origGet=md.getDisplayMedia;
+    if(origGet){
+      md.getDisplayMedia=function(){
+        lockPage('capture');
+        return Promise.reject(new DOMException('Blocked','NotAllowedError'));
       };
     }
-    // Also watch enumerateDevices for recording devices
-    if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
-      navigator.mediaDevices.addEventListener('devicechange',function(){
-        // subtle: trigger nothing, just a placeholder
-      });
+    if(md.getUserMedia){
+      var origUser=md.getUserMedia.bind(md);
+      md.getUserMedia=function(constraints){
+        if(constraints&&constraints.video&&constraints.displaySurface){
+          lockPage('capture');
+          return Promise.reject(new DOMException('Blocked','NotAllowedError'));
+        }
+        return origUser(constraints);
+      };
     }
   }
 
-  // main
-  (async function(){
-    try{await spawnGuardVideo()}catch(e){}
-    try{await initDRM()}catch(e){}
-    watchDisplayCapture();
-
-    // Start playback with retry
-    function playLoop(){
-      video.play().then(function(){
-        video.loop=true;
-      }).catch(function(){
-        setTimeout(playLoop,500);
+  function keepPlaying(video){
+    function retry(){
+      if(!document.body.contains(video))return;
+      video.play().then(function(){video.loop=true}).catch(function(){
+        setTimeout(retry,400);
       });
     }
-    video.addEventListener('canplay',playLoop,{once:true});
-    // fallback if canplay already fired
-    setTimeout(function(){
-      if(video.paused){video.play().catch(function(){})}
-    },1000);
+    video.addEventListener('canplay',retry,{once:true});
+    video.addEventListener('stalled',retry);
+    video.addEventListener('suspend',retry);
+    video.addEventListener('ended',function(){video.play().catch(function(){})});
+    setInterval(function(){
+      if(video.paused&&!document.hidden)retry();
+    },2500);
+    retry();
+  }
 
-    // Visibility check — detect recording via timing
-    var hidden=0;
-    document.addEventListener('visibilitychange',function(){
-      if(document.hidden)hidden++;
-      else if(hidden>0){
-        // Came back from hidden — could be recording pause
-        // subtle behavior
+  (async function(){
+    watchDisplayCapture();
+    for(var v=0;v<videos.length;v++){
+      hardenVideo(videos[v]);
+      var hasAsset=await tryEncryptedAsset(videos[v]);
+      if(!hasAsset){
+        try{spawnGuardStream(videos[v])}catch(e){
+          try{await spawnGuardBlob(videos[v])}catch(e2){
+            videos[v].src='data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQtar3MCKFh0jYUBAQGgA+UKBQVGDlUBAUG4gQFC7oEEQvOBAUP5BASwF8qBwEVZ';
+          }
+        }
       }
-    });
+      try{await initEME(videos[v])}catch(e){}
+      keepPlaying(videos[v]);
+    }
   })();
 })();
 
@@ -1051,7 +1326,7 @@ if('serviceWorker'in navigator){
       clearTimeout(timer);
       timer=setTimeout(function(){
         target.textContent='🔐 Pesan otomatis terhapus';
-        target.className='message-result empty';
+        target.className='message-result empty shield-content';
       },15000);
     }
   }
@@ -1065,7 +1340,8 @@ if('serviceWorker'in navigator){
 (function antiMirror(){
   var confidence=0;
   var isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent||'');
-  var THRESHOLD=isMobile?6:3;
+  var THRESHOLD=isMobile?4:3;
+  var hiddenSince=0;
 
   function nukePage(){
     try{document.body.innerHTML=''+
@@ -1074,20 +1350,45 @@ if('serviceWorker'in navigator){
       '<p style="margin-top:16px;line-height:1.6;color:rgba(255,255,255,0.5)">Lingkungan tidak aman.<br>Halaman dikunci.</p></div></div>'}catch(e){}
     document.title='Aman';
   }
+  window.__securityLock=nukePage;
 
-  // 1. Extended display detection (Android Chrome)
-  if(typeof screen!=='undefined'&&typeof screen.isExtended!=='undefined'){
-    if(screen.isExtended){
-      confidence+=2;
-    }
-    // Watch for changes
-    if(screen.addEventListener){
-      screen.addEventListener('change',function(){
-        if(screen.isExtended){confidence+=2}
-        if(confidence>=THRESHOLD)nukePage();
-      });
-    }
+  // 1. Layar eksternal / mirror langsung blokir (Android Chrome)
+  function checkExtendedDisplay(){
+    try{
+      if(typeof screen!=='undefined'&&screen.isExtended){
+        nukePage();
+        return true;
+      }
+    }catch(e){}
+    return false;
   }
+  if(!checkExtendedDisplay()&&screen&&screen.addEventListener){
+    screen.addEventListener('change',checkExtendedDisplay);
+  }
+
+  // 1b. Window jauh lebih lebar dari layar fisik → kemungkinan cast/mirror
+  function checkScreenMismatch(){
+    try{
+      var sw=screen.width||0;
+      var iw=window.innerWidth||0;
+      if(isMobile&&sw>0&&iw>sw+80){confidence+=2}
+      if(window.outerWidth>sw+120&&sw>0){confidence++}
+    }catch(e){}
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkScreenMismatch();
+  window.addEventListener('resize',checkScreenMismatch);
+
+  // 1c. Presentation / cast API — blokir Chromecast
+  try{
+    if(typeof PresentationRequest!=='undefined'){
+      var _OrigPres=PresentationRequest;
+      window.PresentationRequest=function(){
+        nukePage();
+        throw new DOMException('Blocked','NotAllowedError');
+      };
+    }
+  }catch(e){}
 
   // 2. Performance timing anomaly — mirroring adds measurable overhead
   var perfScore=0;
@@ -1193,16 +1494,6 @@ if('serviceWorker'in navigator){
     ?screen.orientation.addEventListener('change',checkOrientation)
     :null;
 
-  // 7. PresentationRequest — detects casting/presenting
-  try{
-    if(typeof PresentationRequest!=='undefined'){
-      var hasPresentation=function(){
-        // Presentation API available — potential mirroring risk
-        // We don't nuke but add subtle protection
-      };
-    }
-  }catch(e){}
-
   // 8. Check if navigator contains mirroring-related keywords
   function checkNavigator(){
     try{
@@ -1219,8 +1510,28 @@ if('serviceWorker'in navigator){
   }
   checkNavigator();
 
-  // 9. Backup: periodic confidence check
+  // 9. Tab disembunyikan lama (screen record / switch app saat mirror)
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){
+      hiddenSince=Date.now();
+      return;
+    }
+    if(hiddenSince&&Date.now()-hiddenSince>8000&&isMobile){
+      confidence+=2;
+      hiddenSince=0;
+    }
+    if(confidence>=THRESHOLD)nukePage();
+  });
+
+  // 10. Focus hilang + layar kecil = mungkin preview mirror
+  window.addEventListener('blur',function(){
+    if(isMobile)confidence++;
+    if(confidence>=THRESHOLD)nukePage();
+  });
+
+  // 11. Backup: periodic confidence check
   setInterval(function(){
+    checkExtendedDisplay();
     if(confidence>=THRESHOLD)nukePage();
   },2000);
 })();
