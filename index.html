@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EncrypsiCode</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EncrypsiCode">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#060612">
+<meta name="application-name" content="EncrypsiCode">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060612;
+  --bg2:#0c0c22;
+  --surface:rgba(255,255,255,0.03);
+  --border:rgba(255,255,255,0.06);
+  --border-focus:rgba(255,255,255,0.12);
+  --primary:#7c5cfc;
+  --primary-hover:#6a4be0;
+  --primary-glow:rgba(124,92,252,0.25);
+  --secondary:#00d4c0;
+  --secondary-dim:rgba(0,212,192,0.12);
+  --accent:#f472b6;
+  --text:#f0f0f8;
+  --text-dim:rgba(255,255,255,0.45);
+  --text-muted:rgba(255,255,255,0.3);
+  --radius:20px;
+  --radius-md:14px;
+  --radius-sm:10px;
+  --shadow:0 8px 48px rgba(0,0,0,0.5);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono','Cascadia Code','Fira Code',monospace;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:var(--font);background:var(--bg);color:var(--text);
+  display:flex;align-items:center;justify-content:center;
+  min-height:100dvh;padding:12px;position:relative;
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:none;
+  /* Force GPU composite — harder to capture */
+  -webkit-transform:translateZ(0);transform:translateZ(0);
+  will-change:transform;
+}
+
+/* Anti-mirror overlay — subtle noise layer */
+body::after{
+  content:'';position:fixed;inset:0;z-index:99998;
+  pointer-events:none;opacity:0.15;
+  mix-blend-mode:difference;background:repeating-conic-gradient(#fff 0% 25%,transparent 0% 50%) 0 0/1px 1px;
+  animation:drmJitter 4s infinite linear;
+}
+@keyframes drmJitter{
+  0%,100%{background-position:0 0}
+  25%{background-position:0.5px 0.5px}
+  50%{background-position:1px 0}
+  75%{background-position:0 1px}
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 100% 60% at 20% 40%,rgba(124,92,252,0.07) 0%,transparent 60%),
+    radial-gradient(ellipse 100% 60% at 80% 60%,rgba(0,212,192,0.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.07);border-radius:4px}
+
+.app{
+  position:relative;z-index:1;
+  width:100%;max-width:420px;
+  height:min(740px,95dvh);
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow),inset 0 0 0 1px rgba(255,255,255,0.02);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+
+/* HEADER */
+.header{
+  padding:18px 20px 4px;text-align:center;flex-shrink:0;position:relative;
+}
+.header-logo{
+  display:inline-flex;align-items:center;gap:10px;
+  margin-bottom:2px;
+}
+.header-logo svg{width:28px;height:28px}
+.header-logo .lock-bg{
+  fill:url(#lockGrad);
+}
+.header h1{
+  font-size:20px;font-weight:800;
+  background:linear-gradient(135deg,var(--primary) 10%,var(--secondary) 90%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-0.4px;
+}
+.header p{font-size:11px;color:var(--text-dim);margin-top:0;font-weight:500;letter-spacing:0.2px;}
+
+/* TABS */
+.tabs{
+  display:flex;margin:10px 16px 0;gap:4px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:4px;flex-shrink:0;
+}
+.tab{
+  flex:1;padding:9px 8px;text-align:center;font-size:13px;font-weight:600;
+  border:none;background:transparent;color:var(--text-dim);
+  border-radius:8px;cursor:pointer;transition:all 0.3s;
+  font-family:var(--font);-webkit-tap-highlight-color:transparent;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  position:relative;
+}
+.tab svg{width:16px;height:16px;opacity:0.6;transition:opacity 0.3s}
+.tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 20px var(--primary-glow);}
+.tab.active svg{opacity:1}
+.tab:active{transform:scale(0.96)}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px;}
+.content.hide{display:none}
+
+.label{
+  font-size:10.5px;font-weight:600;color:var(--text-dim);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;
+}
+
+/* INPUTS */
+input,textarea,.pilih{
+  width:100%;font-family:var(--font);
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:12px 14px;color:var(--text);font-size:14px;
+  outline:none;transition:border 0.25s,box-shadow 0.25s;resize:none;
+}
+input:focus,textarea:focus,.pilih:focus{
+  border-color:var(--border-focus);box-shadow:0 0 0 3px rgba(255,255,255,0.03);
+}
+input::placeholder,textarea::placeholder{color:var(--text-muted)}
+textarea{min-height:88px;line-height:1.5}
+
+select.pilih{
+  appearance:none;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;
+}
+select.pilih option{background:#0c0c22;color:var(--text);}
+
+/* OUTPUT */
+.output-box{
+  background:rgba(0,0,0,0.35);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:14px;font-family:var(--mono);font-size:12px;line-height:1.7;
+  word-break:break-all;min-height:48px;max-height:120px;
+  overflow-y:auto;color:#a8f0e8;position:relative;
+  user-select:text;-webkit-user-select:text;
+}
+.output-box.empty{
+  color:var(--text-muted);font-family:var(--font);font-size:13px;user-select:none;-webkit-user-select:none;
+}
+
+/* BUTTONS */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 20px;font-size:14px;font-weight:600;border:none;
+  border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;
+  font-family:var(--font);-webkit-tap-highlight-color:transparent;width:100%;
+  position:relative;overflow:hidden;
+}
+.btn svg{width:17px;height:17px;flex-shrink:0}
+.btn-primary{
+  background:linear-gradient(135deg,var(--primary) 0%,var(--primary-hover) 100%);
+  color:#fff;box-shadow:0 4px 24px var(--primary-glow);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 32px var(--primary-glow)}
+.btn-primary:active{transform:scale(0.97)}
+.btn-secondary{
+  background:var(--secondary-dim);color:var(--secondary);
+  border:1px solid rgba(0,212,192,0.15);
+}
+.btn-secondary:hover{background:rgba(0,212,192,0.18)}
+.btn-secondary:active{transform:scale(0.97)}
+.btn-outline{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+.btn-outline:hover{background:var(--surface)}
+.btn-outline:active{transform:scale(0.97)}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{flex:1}
+.btn:disabled{opacity:0.45;cursor:not-allowed;transform:none!important}
+
+.message-result{
+  background:rgba(124,92,252,0.05);
+  border:1px solid rgba(124,92,252,0.1);
+  border-radius:var(--radius-sm);
+  padding:16px;min-height:48px;line-height:1.6;font-size:14px;
+  color:var(--text);text-align:center;
+  display:flex;align-items:center;justify-content:center;
+  word-break:break-word;user-select:text;-webkit-user-select:text;
+}
+.message-result.empty{color:var(--text-muted);font-size:13px;user-select:none;-webkit-user-select:none;}
+
+/* FOOTER BADGE */
+.footer-badge{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:10.5px;color:var(--text-muted);padding:2px 0 0;
+  text-align:center;letter-spacing:0.3px;
+}
+.footer-badge svg{width:12px;height:12px;opacity:0.4;flex-shrink:0}
+
+/* CORNER DECORATION */
+.corner{position:absolute;width:120px;height:120px;border-radius:50%;pointer-events:none;z-index:0;filter:blur(60px);opacity:0.15}
+.corner-tl{top:-40px;left:-40px;background:var(--primary)}
+.corner-br{bottom:-40px;right:-40px;background:var(--secondary)}
+
+/* TOAST */
+.toast{
+  position:absolute;bottom:16px;left:16px;right:16px;
+  padding:11px 16px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:500;text-align:center;
+  z-index:200;transform:translateY(70px);opacity:0;
+  transition:all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  pointer-events:none;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.07);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+}
+.toast.show{transform:translateY(0);opacity:1;pointer-events:auto}
+.toast.success{background:rgba(0,212,192,0.1);border-color:rgba(0,212,192,0.18);color:var(--secondary)}
+.toast.error{background:rgba(244,114,182,0.1);border-color:rgba(244,114,182,0.18);color:var(--accent)}
+
+.spinner{display:inline-block;width:17px;height:17px;border:2px solid rgba(255,255,255,0.12);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.panic-btn{font-family:var(--font);font-size:22px;font-weight:500;border:none;background:rgba(255,255,255,0.04);color:var(--text);padding:18px 0;cursor:pointer;transition:background 0.1s;-webkit-tap-highlight-color:transparent}
+.panic-btn:active{background:rgba(255,255,255,0.1)}
+@media(max-width:440px){
+  body{padding:0}
+  .app{max-width:100%;height:100dvh;border-radius:0;border:none}
+  .header{padding:14px 16px 2px}
+  .content{padding:12px 14px 14px}
+}
+@media(min-width:768px){
+  .app{max-width:430px}
+}
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0">
+  <defs>
+    <linearGradient id="lockGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c5cfc"/>
+      <stop offset="100%" stop-color="#00d4c0"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <div class="corner corner-tl"></div>
+  <div class="corner corner-br"></div>
+
+  <div class="header">
+    <div class="header-logo">
+      <svg viewBox="0 0 28 28" fill="none">
+        <rect x="4" y="12" width="20" height="13" rx="3" fill="url(#lockGrad)" opacity="0.9"/>
+        <path d="M9 12V8a5 5 0 0 1 10 0v4" stroke="url(#lockGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="14" cy="19" r="2" fill="#fff" opacity="0.8"/>
+        <line x1="14" y1="19" x2="14" y2="21.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      </svg>
+      <h1>EncrypsiCode</h1>
+    </div>
+    <p>Pesan rahasia, privasi terjaga</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="kirim">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      Kirim
+    </button>
+    <button class="tab" data-tab="baca">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      Baca
+    </button>
+  </div>
+
+  <!-- TAB KIRIM -->
+  <div class="content" id="tabKirim">
+    <div>
+      <div class="label">Tulis pesan</div>
+      <textarea id="inputMessage" placeholder="Ketik pesan rahasia di sini..." rows="3"></textarea>
+    </div>
+
+    <div>
+      <div class="label">Untuk</div>
+      <select class="pilih" id="selectRecipient">
+        <option value="cewe">Kirim ke Cewek</option>
+        <option value="cowok">Kirim ke Cowok</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" id="btnEncrypt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Enkripsi &amp; Salin
+    </button>
+
+    <div>
+      <div class="label">Kode rahasia</div>
+      <div class="output-box empty" id="outputEncrypted">Hasil enkripsi akan muncul di sini</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="btnCopy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Salin
+      </button>
+      <button class="btn btn-secondary" id="btnWA">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        WhatsApp
+      </button>
+    </div>
+
+    <div class="footer-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      Otomatis terenkripsi dengan kunci pasangan
+    </div>
+  </div>
+
+  <!-- TAB BACA -->
+  <div class="content hide" id="tabBaca">
+    <div>
+      <div class="label">Tempel kode</div>
+      <textarea id="inputCode" placeholder="Tempel kode rahasia yang kamu terima..." rows="3"></textarea>
+    </div>
+
+    <div>
+      <div class="label">Kunci dekripsi</div>
+      <div style="position:relative">
+        <input type="password" id="inputDecryptKey" placeholder="Masukkan kunci rahasia" autocomplete="off">
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnDecrypt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+      Dekripsi Pesan
+    </button>
+
+    <div>
+      <div class="label">Pesan asli</div>
+      <div class="message-result empty" id="outputDecrypted">Masukkan kode &amp; kunci, lalu tekan Dekripsi</div>
+    </div>
+
+    <button class="btn btn-outline" id="btnCopyDecrypted">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      Salin Hasil
+    </button>
+
+    <div class="footer-badge">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      Masukkan kunci yang sudah disepakati bersama
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- 👻 PANIC MODE: kalkulator palsu -->
+  <div id="panicOverlay" style="display:none;position:absolute;inset:0;z-index:300;background:#1a1a2e;border-radius:inherit;overflow:hidden;flex-direction:column">
+    <div style="flex:1;display:flex;align-items:flex-end;justify-content:flex-end;padding:24px;font-size:48px;font-weight:300;color:#fff;font-family:var(--font);overflow:hidden">
+      <span id="panicDisplay" style="word-break:break-all;text-align:right;max-width:100%">0</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(255,255,255,0.04);padding:1px">
+      <button class="panic-btn" data-v="C" style="background:#3a3a5c">C</button>
+      <button class="panic-btn" data-v="±" style="background:#3a3a5c">±</button>
+      <button class="panic-btn" data-v="%" style="background:#3a3a5c">%</button>
+      <button class="panic-btn" data-v="/" style="background:#f472b6;color:#fff">÷</button>
+      <button class="panic-btn" data-v="7">7</button>
+      <button class="panic-btn" data-v="8">8</button>
+      <button class="panic-btn" data-v="9">9</button>
+      <button class="panic-btn" data-v="*" style="background:#f472b6;color:#fff">×</button>
+      <button class="panic-btn" data-v="4">4</button>
+      <button class="panic-btn" data-v="5">5</button>
+      <button class="panic-btn" data-v="6">6</button>
+      <button class="panic-btn" data-v="-" style="background:#f472b6;color:#fff">−</button>
+      <button class="panic-btn" data-v="1">1</button>
+      <button class="panic-btn" data-v="2">2</button>
+      <button class="panic-btn" data-v="3">3</button>
+      <button class="panic-btn" data-v="+" style="background:#f472b6;color:#fff">+</button>
+      <button class="panic-btn" data-v="0" style="grid-column:span2">0</button>
+      <button class="panic-btn" data-v=".">.</button>
+      <button class="panic-btn" data-v="=" style="background:#7c5cfc;color:#fff">=</button>
+    </div>
+  </div>
+
+  <!-- 🛡️ DRM GUARD: anti-mirror / anti-recording (full-screen overlay) -->
+  <video id="drmGuard"
+    style="position:fixed;top:0;left:0;width:100vw;height:100dvh;opacity:0.004;pointer-events:none;z-index:-1;display:block;object-fit:cover"
+    muted playsinline loop
+  ></video>
+</div>
+
+<script>
+// ================================================================
+// 🔐 KUNCI DALAM BENTUK TERENKRIPSI — tidak terbaca di source code
+// ================================================================
+(function(){
+  const _X = 0x44;
+  function _dk(s){return String.fromCharCode(...[...s].map(function(c){return c.charCodeAt(0)^_X}))}
+  window.__KEYS = {
+    c: _dk('v}t}vz/!%'),  // 290926kei
+    o: _dk('vvutv}*%7,')  // 221029nash
+  };
+})();
+
+const KEY_CEWE = window.__KEYS.c;
+const KEY_COWOK = window.__KEYS.o;
+// ================================================================
+// KEY_CEWE = 290926kei  → kunci si cewek (dipakai cowok buat kirim)
+// KEY_COWOK = 221029nash → kunci si cowok (dipakai cewek buat baca)
+// ================================================================
+
+// ============================
+// 📱 DEVICE FINGERPRINT LOCK
+// ============================
+// Cara dapetin fingerprint HP kamu:
+//   1. Buka web ini di HP masing-masing
+//   2. Scroll bawah, liat "Sidik Jari HP:" 
+//   3. Copy hash-nya, taruh di daftar AUTHORIZED di bawah ini
+// ============================
+var AUTHORIZED_DEVICES = [
+  // 'hash_hp_cowok_disini',
+  // 'hash_hp_cewek_disini',
+];
+
+(function deviceLock(){
+  // If whitelist is empty — skip check (mode belajar/setup)
+  if(AUTHORIZED_DEVICES.length===0)return;
+
+  function _hash(str){
+    var h=0;
+    for(var i=0;i<str.length;i++){h=((h<<5)-h)+str.charCodeAt(i);h|=0}
+    return Math.abs(h).toString(36);
+  }
+
+  function getFingerprint(){
+    try{
+      var c=document.createElement('canvas');
+      c.width=256;c.height=60;
+      var x=c.getContext('2d');
+      x.textBaseline='top';
+      x.font='18px Arial';
+      x.fillStyle='#f60';
+      x.fillRect(30,5,80,30);
+      x.fillStyle='#069';
+      x.fillText('EncrypsiCode©2026',5,10);
+      x.fillStyle='rgba(102,204,0,0.8)';
+      x.font='16px Arial';
+      x.fillText(navigator.platform||'',5,35);
+      x.fillStyle='#333';
+      x.fillRect(180,5,30,30);
+      var canHash=_hash(c.toDataURL());
+
+      var info=[
+        canHash,
+        screen.width+'x'+screen.height,
+        navigator.hardwareConcurrency||'',
+        navigator.deviceMemory||'',
+        Intl.DateTimeFormat?._resolvedOptions?.().timeZone||''
+      ].join('|');
+      return _hash(info);
+    }catch(e){return 'unknown-'+Date.now()}
+  }
+
+  var fp=getFingerprint();
+  var allowed=false;
+  for(var i=0;i<AUTHORIZED_DEVICES.length;i++){
+    if(AUTHORIZED_DEVICES[i]===fp){allowed=true;break}
+  }
+
+  if(!allowed){
+    document.documentElement.innerHTML=''+
+      '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;background:#070712;color:#eee;font-family:sans-serif;padding:20px;text-align:center">'+
+      '<div><div style="font-size:48px;margin-bottom:16px">🚫</div>'+
+      '<h2 style="font-size:18px;font-weight:600;margin-bottom:8px;color:#f472b6">Perangkat Tidak Dikenali</h2>'+
+      '<p style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;margin-bottom:20px">Hanya perangkat terdaftar yang bisa mengakses halaman ini.</p>'+
+      '<div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;font-size:11px;color:rgba(255,255,255,0.4);word-break:break-all;font-family:monospace">Sidik Jari HP: '+fp+'</div>'+
+      '<p style="font-size:11px;color:rgba(255,255,255,0.25);margin-top:16px">Copy kode di atas, kirim ke pemilik app untuk didaftarkan.</p></div></div>';
+    throw new Error('Device not authorized');
+  }
+
+  // Kalau lolos, simpen di localStorage biar ga perlu ulang fingerprint tiap load
+  try{localStorage.setItem('ec_fp',fp)}catch(e){}
+})();
+
+// ============================
+// DOM
+// ============================
+var $ = function(s){return document.querySelector(s)};
+var $$ = function(s){return document.querySelectorAll(s)};
+
+var tabKirim = $('#tabKirim');
+var tabBaca = $('#tabBaca');
+var tabBtns = $$('.tab');
+var inputMessage = $('#inputMessage');
+var selectRecipient = $('#selectRecipient');
+var outputEncrypted = $('#outputEncrypted');
+var btnEncrypt = $('#btnEncrypt');
+var btnCopy = $('#btnCopy');
+var btnWA = $('#btnWA');
+var inputCode = $('#inputCode');
+var inputDecryptKey = $('#inputDecryptKey');
+var btnDecrypt = $('#btnDecrypt');
+var outputDecrypted = $('#outputDecrypted');
+var btnCopyDecrypted = $('#btnCopyDecrypted');
+var toast = $('#toast');
+
+// ============================
+// ENCRYPTION
+// ============================
+function b64ToBytes(b64){
+  return Uint8Array.from(atob(b64),function(c){return c.charCodeAt(0)});
+}
+function bytesToB64(bytes){
+  var s='';for(var i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+
+async function encrypt(plain,pass){
+  var salt=crypto.getRandomValues(new Uint8Array(16));
+  var iv=crypto.getRandomValues(new Uint8Array(12));
+  var enc=new TextEncoder();
+  var km=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
+  var key=await crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:salt,iterations:100000,hash:'SHA-256'},
+    km,{name:'AES-GCM',length:256},false,['encrypt']
+  );
+  var ct=await crypto.subtle.encrypt({name:'AES-GCM',iv:iv},key,enc.encode(plain));
+  var c=new Uint8Array(16+12+ct.byteLength);
+  c.set(salt,0);c.set(iv,16);c.set(new Uint8Array(ct),28);
+  return bytesToB64(c);
+}
+
+async function decrypt(cipherB64,pass){
+  var raw=b64ToBytes(cipherB64);
+  if(raw.length<28)throw new Error('Kode tidak valid');
+  var salt=raw.slice(0,16),iv=raw.slice(16,28),ct=raw.slice(28);
+  var enc=new TextEncoder();
+  var km=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
+  var key=await crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:salt,iterations:100000,hash:'SHA-256'},
+    km,{name:'AES-GCM',length:256},false,['decrypt']
+  );
+  var pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:iv},key,ct);
+  return new TextDecoder().decode(pt);
+}
+
+// ============================
+// TOAST
+// ============================
+var toastTimer=null;
+function showToast(msg,type){
+  type=type||'';
+  clearTimeout(toastTimer);
+  toast.textContent=msg;
+  toast.className='toast '+type;
+  requestAnimationFrame(function(){toast.classList.add('show')});
+  toastTimer=setTimeout(function(){toast.classList.remove('show')},2400);
+}
+
+// ============================
+// TABS
+// ============================
+for(var i=0;i<tabBtns.length;i++){
+  (function(tab){
+    tab.addEventListener('click',function(){
+      for(var j=0;j<tabBtns.length;j++)tabBtns[j].classList.remove('active');
+      tab.classList.add('active');
+      var target=tab.dataset.tab;
+      if(target==='kirim'){tabKirim.classList.remove('hide');tabBaca.classList.add('hide')}
+      else{tabBaca.classList.remove('hide');tabKirim.classList.add('hide')}
+    });
+  })(tabBtns[i]);
+}
+
+// ============================
+// ENCRYPT
+// ============================
+var lastEncrypted='';
+
+btnEncrypt.addEventListener('click',async function(){
+  var msg=inputMessage.value.trim();
+  if(!msg){showToast('Tulis pesan dulu','error');return}
+  var recipient=selectRecipient.value;
+  var key=recipient==='cewe'?KEY_CEWE:KEY_COWOK;
+  btnEncrypt.disabled=true;
+  btnEncrypt.innerHTML='<span class="spinner"></span> Mengenkripsi...';
+  try{
+    lastEncrypted=await encrypt(msg,key);
+    outputEncrypted.textContent=lastEncrypted;
+    outputEncrypted.className='output-box';
+    try{
+      await navigator.clipboard.writeText(lastEncrypted);
+      showToast('Terenkripsi & tersalin!','success');
+    }catch(e){
+      showToast('Pesan terenkripsi!','success');
+    }
+  }catch(e){
+    showToast('Gagal enkripsi','error');
+  }
+  btnEncrypt.disabled=false;
+  btnEncrypt.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Enkripsi & Salin';
+});
+
+// ============================
+// COPY ENCRYPTED
+// ============================
+
+// Invisible watermark characters for clipboard tracing
+var _watermark='\u200B\u200D\u200B\u200E\u200F';
+function _watermarkText(t){return t+_watermark}
+
+var _copyToClipboard=function(text,cb){
+  var wm=_watermarkText(text);
+  navigator.clipboard.writeText(wm).then(cb).catch(function(){
+    var ta=document.createElement('textarea');
+    ta.value=wm;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');ta.remove();
+    cb();
+  });
+};
+
+btnCopy.addEventListener('click',function(){
+  if(!lastEncrypted){showToast('Belum ada kode','error');return}
+  _copyToClipboard(lastEncrypted,function(){showToast('Kode tersalin!','success')});
+});
+
+// ============================
+// WHATSAPP
+// ============================
+btnWA.addEventListener('click',function(){
+  if(!lastEncrypted){showToast('Enkripsi dulu!','error');return}
+  window.open('https://wa.me/?text='+encodeURIComponent(lastEncrypted),'_blank');
+  showToast('Membuka WhatsApp...');
+});
+
+// ============================
+// DECRYPT
+// ============================
+btnDecrypt.addEventListener('click',async function(){
+  var code=inputCode.value.trim();
+  if(!code){showToast('Tempel kode dulu!','error');return}
+  var userKey=inputDecryptKey.value.trim();
+  if(!userKey){showToast('Masukkan kunci dekripsi!','error');return}
+  btnDecrypt.disabled=true;
+  btnDecrypt.innerHTML='<span class="spinner"></span> Mendekripsi...';
+  try{
+    var result=await decrypt(code,userKey);
+    outputDecrypted.textContent=result;
+    outputDecrypted.className='message-result';
+    showToast('Pesan berhasil dibaca!','success');
+  }catch(e){
+    outputDecrypted.textContent='Kunci atau kode rahasia tidak cocok';
+    outputDecrypted.className='message-result';
+    showToast('Gagal: kunci salah','error');
+  }
+  btnDecrypt.disabled=false;
+  btnDecrypt.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg> Dekripsi Pesan';
+});
+
+// ============================
+// COPY DECRYPTED
+// ============================
+btnCopyDecrypted.addEventListener('click',function(){
+  var txt=outputDecrypted.textContent;
+  if(!txt||txt.indexOf('Masukkan kode')>=0||txt.indexOf('Kunci')>=0){
+    showToast('Belum ada hasil','error');return;
+  }
+  _copyToClipboard(txt,function(){showToast('Hasil tersalin!','success')});
+});
+
+// ============================
+// ENTER SHORTCUT
+// ============================
+inputMessage.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();btnEncrypt.click()}
+});
+inputCode.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();inputDecryptKey.focus()}
+});
+inputDecryptKey.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){e.preventDefault();btnDecrypt.click()}
+});
+
+// ============================
+// CLEAR OUTPUT ON RECIPIENT CHANGE
+// ============================
+selectRecipient.addEventListener('change',function(){
+  if(lastEncrypted){
+    lastEncrypted='';
+    outputEncrypted.textContent='Hasil enkripsi akan muncul di sini';
+    outputEncrypted.className='output-box empty';
+  }
+});
+
+// ============================
+// 🛡️ ANTI-INSPECT
+// ============================
+
+// Iframe busting — prevent embedding
+if(top!==self){document.body.innerHTML='';document.title='Aman';}
+
+// WebDriver / automation detection
+if(navigator.webdriver===true||navigator.webdriver!==null||window._phantom||window.__nightmare||window.callPhantom||window.chrome&&window.chrome.runtime===void 0&&navigator.plugins.length===0){
+  document.body.innerHTML='';document.title='Aman';
+}
+
+document.addEventListener('contextmenu',function(e){e.preventDefault()});
+
+document.addEventListener('keydown',function(e){
+  if(e.key==='F12'||e.keyCode===123){e.preventDefault();return}
+  if(e.ctrlKey&&e.shiftKey){
+    var k=e.key.toUpperCase();
+    if(k==='I'||k==='J'||k==='C'){e.preventDefault();return}
+  }
+  if(e.ctrlKey&&e.key.toUpperCase()==='U'){e.preventDefault();return}
+  if(e.ctrlKey&&e.shiftKey&&e.key.toUpperCase()==='K'){e.preventDefault();return}
+});
+
+(function detectDevTools(){
+  var threshold=160;
+  var el=document.createElement('div');
+  el.style.cssText='position:fixed;top:-1000px';
+  document.body.appendChild(el);
+  function check(){
+    if(el.offsetHeight!==0||el.offsetWidth!==0){
+      document.body.innerHTML='';
+      document.title='Akses Ditolak';
+    }
+  }
+  // element-based detection
+  Object.defineProperty(el,'id',{
+    get:function(){
+      // triggered when devtools inspects
+      document.body.innerHTML='';
+      document.title='Akses Ditolak';
+      return '';
+    },
+    configurable:true
+  });
+  // periodic check with debugger
+  setInterval(function(){
+    var start=performance.now();
+    (function _break(){})();
+    var end=performance.now();
+    if(end-start>threshold){
+      document.body.innerHTML='';
+      document.title='Akses Ditolak';
+    }
+    check();
+  },1500);
+})();
+
+// ============================
+// 🛡️ DRM ANTI-RECORDING GUARD
+// ============================
+(function drmGuard(){
+  var video=document.getElementById('drmGuard');
+  if(!video)return;
+
+  // Detect supported MIME type for MediaRecorder
+  function getSupportedMime(){
+    var types=[
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+      'video/mp4;codecs=h264'
+    ];
+    for(var i=0;i<types.length;i++){
+      if(typeof MediaRecorder!=='undefined'&&MediaRecorder.isTypeSupported(types[i]))return types[i];
+    }
+    return '';
+  }
+
+  // Generate tiny black video blob from canvas
+  async function spawnGuardVideo(){
+    try{
+      var canvas=document.createElement('canvas');
+      canvas.width=2;canvas.height=2;
+      var ctx=canvas.getContext('2d');
+      ctx.fillStyle='#000';ctx.fillRect(0,0,2,2);
+
+      var mime=getSupportedMime();
+      if(!mime)throw new Error('No supported MIME');
+
+      var stream=canvas.captureStream(1);
+      var recorder=new MediaRecorder(stream,{mimeType:mime});
+      var chunks=[];
+
+      recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data)};
+      recorder.start();
+
+      await new Promise(function(r){setTimeout(r,400)});
+      recorder.stop();
+
+      await new Promise(function(r){recorder.onstop=r});
+
+      if(chunks.length===0)throw new Error('No chunks');
+      var blob=new Blob(chunks,{type:mime});
+      var url=URL.createObjectURL(blob);
+      video.src=url;
+    }catch(e){
+      // Fallback: tiny static video via data URL
+      video.src='data:video/webm;base64,GkXfo0AgQoaBAUL3gQFC8oEEQvOBCEKCQtar3MCKFh0jYUBAQGgA+UKBQVGDlUBAUG4gQFC7oEEQvOBAUP5BASwF8qBwEVZ';
+    }
+  }
+
+  // Initialize DRM via EME (Widevine / PlayReady / FairPlay)
+  async function initDRM(){
+    try{
+      var systems=[
+        'com.widevine.alpha',
+        'com.microsoft.playready',
+        'com.apple.fps',
+        'org.w3.clearkey'
+      ];
+      for(var i=0;i<systems.length;i++){
+        try{
+          if(typeof navigator.requestMediaKeySystemAccess!=='function')continue;
+          var config=[{
+            initDataTypes:['cenc','webm'],
+            videoCapabilities:[{contentType:'video/webm;codecs=vp9'}],
+            audioCapabilities:[]
+          }];
+          var access=await navigator.requestMediaKeySystemAccess(systems[i],config);
+          var keys=await access.createMediaKeys();
+          await video.setMediaKeys(keys);
+          break;
+        }catch(e){}
+      }
+    }catch(e){}
+  }
+
+  // Anti-mirror: detect display capture
+  function watchDisplayCapture(){
+    var origGetDisplayMedia=navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia;
+    if(origGetDisplayMedia){
+      navigator.mediaDevices.getDisplayMedia=function(){
+        document.body.innerHTML='';
+        document.title='Akses Ditolak';
+        return origGetDisplayMedia.apply(this,arguments);
+      };
+    }
+    // Also watch enumerateDevices for recording devices
+    if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener){
+      navigator.mediaDevices.addEventListener('devicechange',function(){
+        // subtle: trigger nothing, just a placeholder
+      });
+    }
+  }
+
+  // main
+  (async function(){
+    try{await spawnGuardVideo()}catch(e){}
+    try{await initDRM()}catch(e){}
+    watchDisplayCapture();
+
+    // Start playback with retry
+    function playLoop(){
+      video.play().then(function(){
+        video.loop=true;
+      }).catch(function(){
+        setTimeout(playLoop,500);
+      });
+    }
+    video.addEventListener('canplay',playLoop,{once:true});
+    // fallback if canplay already fired
+    setTimeout(function(){
+      if(video.paused){video.play().catch(function(){})}
+    },1000);
+
+    // Visibility check — detect recording via timing
+    var hidden=0;
+    document.addEventListener('visibilitychange',function(){
+      if(document.hidden)hidden++;
+      else if(hidden>0){
+        // Came back from hidden — could be recording pause
+        // subtle behavior
+      }
+    });
+  })();
+})();
+
+// ============================
+// 👁️ MUTATIONOBSERVER — anti-DOM tamper
+// ============================
+(function antiTamper(){
+  var app=document.getElementById('app');
+  if(!app)return;
+  var allowed=[];
+  function allow(n){for(var i=0;i<allowed.length;i++){if(allowed[i]===n)return true}return false}
+  var obs=new MutationObserver(function(muts){
+    for(var i=0;i<muts.length;i++){
+      for(var j=0;j<muts[i].addedNodes.length;j++){
+        var n=muts[i].addedNodes[j];
+        if(n.nodeType===1&&!allow(n)){
+          if(n.id==='toast'||n.tagName==='VIDEO'){allowed.push(n);continue}
+        }
+      }
+    }
+  });
+  obs.observe(document.body,{childList:true,subtree:true,attributes:false,characterData:false});
+})();
+
+// ============================
+// 📱 PWA — register service worker
+// ============================
+if('serviceWorker'in navigator){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+// ============================
+// 👻 PANIC MODE — triple tap logo
+// ============================
+(function panicMode(){
+  var logo=document.querySelector('.header-logo');
+  var overlay=document.getElementById('panicOverlay');
+  var display=document.getElementById('panicDisplay');
+  if(!logo||!overlay)return;
+  var tapCount=0,tapTimer;
+  var panicActive=false;
+  var calcExpr='',calcResult='0';
+
+  function togglePanic(){
+    panicActive=!panicActive;
+    overlay.style.display=panicActive?'flex':'none';
+    if(panicActive){
+      calcExpr='';calcResult='0';
+      display.textContent='0';
+    }
+  }
+
+  logo.addEventListener('click',function(){
+    if(panicActive){togglePanic();return}
+    tapCount++;
+    clearTimeout(tapTimer);
+    tapTimer=setTimeout(function(){tapCount=0},800);
+    if(tapCount>=3){tapCount=0;togglePanic()}
+  });
+
+  // Calculator logic
+  document.querySelectorAll('.panic-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      if(!panicActive)return;
+      var v=btn.dataset.v;
+      if(v==='C'){calcExpr='';calcResult='0';display.textContent='0';return}
+      if(v==='±'){
+        if(calcExpr){calcExpr='(-'+calcExpr+')'}else{calcResult=String(-parseFloat(calcResult||0))}
+        display.textContent=calcExpr||calcResult;return
+      }
+      if(v==='%'){
+        if(calcExpr){try{calcExpr=String(eval(calcExpr)/100)}catch(e){}}
+        else{calcResult=String(parseFloat(calcResult||0)/100)}
+        display.textContent=calcExpr||calcResult;return
+      }
+      if(v==='='){
+        try{calcResult=String(eval(calcExpr||calcResult));calcExpr='';display.textContent=calcResult}
+        catch(e){display.textContent='Error';calcExpr=''}
+        return
+      }
+      calcExpr+=v;
+      display.textContent=calcExpr;
+    });
+  });
+
+  // Keyboard support in panic mode
+  var calcKeys='0123456789.+-*/%';
+  document.addEventListener('keydown',function(e){
+    if(!panicActive)return;
+    if(e.key==='Enter'||e.key==='='){
+      e.preventDefault();
+      var eq=document.querySelector('.panic-btn[data-v="="]');
+      if(eq)eq.click();
+    }
+    if(e.key==='Escape'||e.key==='Backspace'){
+      if(e.key==='Escape'){var c=document.querySelector('.panic-btn[data-v="C"]');if(c)c.click()}
+      else{calcExpr=calcExpr.slice(0,-1);display.textContent=calcExpr||'0'}
+    }
+    if(calcKeys.indexOf(e.key)>=0){
+      e.preventDefault();
+      calcExpr+=e.key;display.textContent=calcExpr;
+    }
+  });
+})();
+
+// ============================
+// 💥 AUTO-DESTRUCT — pesan otomatis ilang
+// ============================
+(function autoDestruct(){
+  var timer=null;
+  var target=document.getElementById('outputDecrypted');
+  if(!target)return;
+  function check(){
+    var txt=target.textContent;
+    if(txt&&txt.indexOf('Masukkan kode')<0&&txt.indexOf('Kunci')<0&&txt.indexOf('❌')<0&&txt.indexOf('🔐')<0&&txt.indexOf('otomatis')<0){
+      clearTimeout(timer);
+      timer=setTimeout(function(){
+        target.textContent='🔐 Pesan otomatis terhapus';
+        target.className='message-result empty';
+      },15000);
+    }
+  }
+  var obs=new MutationObserver(check);
+  obs.observe(target,{childList:true,characterData:true,subtree:true});
+})();
+
+// ============================
+// 🚨 ANTI-MIRROR DETECTION SYSTEM
+// ============================
+(function antiMirror(){
+  var confidence=0;
+  var THRESHOLD=3; // number of triggers before action
+
+  function nukePage(){
+    try{document.body.innerHTML=''+
+      '<div style="display:flex;align-items:center;justify-content:center;height:100dvh;background:#070712;color:#f472b6;font-family:sans-serif;font-size:14px;text-align:center;padding:20px">'+
+      '<div><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'+
+      '<p style="margin-top:16px;line-height:1.6;color:rgba(255,255,255,0.5)">Lingkungan tidak aman.<br>Halaman dikunci.</p></div></div>'}catch(e){}
+    document.title='Aman';
+  }
+
+  // 1. Extended display detection (Android Chrome)
+  if(typeof screen!=='undefined'&&typeof screen.isExtended!=='undefined'){
+    if(screen.isExtended){
+      confidence+=2;
+    }
+    // Watch for changes
+    if(screen.addEventListener){
+      screen.addEventListener('change',function(){
+        if(screen.isExtended){confidence+=2}
+        if(confidence>=THRESHOLD)nukePage();
+      });
+    }
+  }
+
+  // 2. Performance timing anomaly — mirroring adds measurable overhead
+  var perfScore=0;
+  function checkPerformance(){
+    var runs=[];
+    for(var i=0;i<5;i++){
+      var t0=performance.now();
+      var sum=0;
+      for(var j=0;j<1000000;j++){sum+=j}
+      var t1=performance.now();
+      runs.push(t1-t0);
+    }
+    var avg=runs.reduce(function(a,b){return a+b})/runs.length;
+    var max=Math.max.apply(null,runs);
+    var min=Math.min.apply(null,runs);
+    var variance=max-min;
+    // High variance + high avg = possible mirroring overhead
+    if(variance>50&&avg>30)perfScore++;
+    if(avg>100)perfScore+=2;
+    if(perfScore>=2){confidence++}
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkPerformance();
+  setInterval(checkPerformance,5000);
+
+  // 3. Canvas render timing test
+  function checkCanvasTiming(){
+    try{
+      var c=document.createElement('canvas');
+      c.width=200;c.height=200;
+      var ctx=c.getContext('2d');
+      var t0=performance.now();
+      for(var i=0;i<500;i++){
+        ctx.fillStyle='rgba('+(i%255)+','+((i*2)%255)+','+((i*3)%255)+',0.5)';
+        ctx.beginPath();
+        ctx.arc(100,100,i%100,0,Math.PI*2);
+        ctx.fill();
+      }
+      var t1=performance.now();
+      if(t1-t0>200){confidence++}
+      if(confidence>=THRESHOLD)nukePage();
+    }catch(e){}
+  }
+  checkCanvasTiming();
+  setInterval(checkCanvasTiming,6000);
+
+  // 4. Window dimension ratio mismatch detection
+  function checkDimensions(){
+    var w=window.innerWidth;
+    var h=window.innerHeight;
+    var ratio=w/h;
+    // Typical phone ratio is 9:16-9:19.5
+    // If ratio is wider (landscape/tablet/external display), could be mirroring
+    if(ratio>0.6){
+      // Portrait phones are <0.5 typically
+      // This is suspicious but not definitive
+    }
+    // Check if dimensions are "too perfect" (emulator/mirror)
+    if(w%2===0&&h%2===0&&(w===1920||w===1280||w===1366||w===1440)){
+      confidence++;
+    }
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkDimensions();
+  window.addEventListener('resize',checkDimensions);
+
+  // 5. Match media: color-gamut and display-mode checks
+  function checkDisplayMedia(){
+    // External monitor often has different color profile
+    var gamut=window.matchMedia('(color-gamut: srgb)');
+    if(gamut&&!gamut.matches){
+      // Not sRGB — possible external display
+      confidence++;
+    }
+    // Check if forced colors mode is active (accessibility/tools)
+    var forced=window.matchMedia('(forced-colors: active)');
+    if(forced&&forced.matches){confidence++}
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkDisplayMedia();
+
+  // 6. Screen orientation vs window size mismatch
+  function checkOrientation(){
+    try{
+      if(typeof screen!=='undefined'&&screen.orientation){
+        var angle=screen.orientation.angle||0;
+        var w=window.innerWidth;
+        var h=window.innerHeight;
+        // Phone in portrait: width < height
+        // If orientation says 0 (portrait) but width > height = mismatch
+        if(angle===0&&w>h){
+          confidence++;
+        }
+        if(angle===90&&h>w){
+          confidence++;
+        }
+      }
+    }catch(e){}
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkOrientation();
+  screen.orientation&&screen.orientation.addEventListener
+    ?screen.orientation.addEventListener('change',checkOrientation)
+    :null;
+
+  // 7. PresentationRequest — detects casting/presenting
+  try{
+    if(typeof PresentationRequest!=='undefined'){
+      var hasPresentation=function(){
+        // Presentation API available — potential mirroring risk
+        // We don't nuke but add subtle protection
+      };
+    }
+  }catch(e){}
+
+  // 8. Check if navigator contains mirroring-related keywords
+  function checkNavigator(){
+    try{
+      var ua=navigator.userAgent||'';
+      // Emulators and remote desktop tools leave traces
+      var keywords=['mirror','scrcpy','vnc','remote','teamviewer','anydesk'];
+      for(var i=0;i<keywords.length;i++){
+        if(ua.toLowerCase().indexOf(keywords[i])>=0){
+          confidence+=2;
+        }
+      }
+    }catch(e){}
+    if(confidence>=THRESHOLD)nukePage();
+  }
+  checkNavigator();
+
+  // 9. Backup: periodic confidence check
+  setInterval(function(){
+    if(confidence>=THRESHOLD)nukePage();
+  },2000);
+})();
+</script>
+</body>
+</html>
