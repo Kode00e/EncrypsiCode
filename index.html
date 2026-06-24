@@ -467,8 +467,8 @@ select.pilih option{background:#0c0c22;color:var(--text);}
 const KEY_CEWE = window.__KEYS.c;
 const KEY_COWOK = window.__KEYS.o;
 // ================================================================
-// KEY_CEWE = KucingOren  → kunci si cewek (dipakai cowok buat kirim)
-// KEY_COWOK = PandaGemoy → kunci si cowok (dipakai cewek buat baca)
+// KEY_CEWE = KucingOren  → Kunci Cewek (Cewek pakai untuk BACA, Cowok pakai untuk KIRIM ke Cewek)
+// KEY_COWOK = PandaGemoy → Kunci Cowok (Cowok pakai untuk BACA, Cewek pakai untuk KIRIM ke Cowok)
 // ================================================================
 
 // ============================
@@ -707,7 +707,8 @@ async function doEncryptAndAction(action){
   var msg=inputMessage.value.trim();
   if(!msg){showToast('Tulis pesan dulu','error');return}
   var recipient=selectRecipient.value;
-  var key=recipient==='cewe'?KEY_CEWE:KEY_COWOK;
+  // Jika kirim ke Cewek, gunakan kunci Cowok. Jika kirim ke Cowok, gunakan kunci Cewek.
+  var key=recipient==='cewe'?KEY_COWOK:KEY_CEWE;
   
   var btn = action==='wa'?btnWA:btnCopy;
   var origHtml = btn.innerHTML;

@@ -1,4 +1,4 @@
-var CACHE='encrypsicode-v2';
+var CACHE='encrypsicode-v3';
 var BASE=self.registration.scope;
 var URLS=[BASE,BASE+'index.html',BASE+'manifest.json'];
 
